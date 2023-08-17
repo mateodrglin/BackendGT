@@ -61,7 +61,7 @@ app.post('/saveStats', ensureAuthenticated, async (req, res) => {
 // register
 app.post('/register', async (req, res) => {
   try {
-      const { name, email, password } = req.body;
+      const { username, email, password } = req.body;
 
       // Check if user with the same email exists
      const existingUser = await User.findOne({ email });
@@ -71,7 +71,7 @@ app.post('/register', async (req, res) => {
 }
 
 const newUser = new User({
-  name,
+  username,
   email,
   password
 });
