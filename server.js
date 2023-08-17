@@ -1,7 +1,10 @@
 const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');  
+const bcrypt = require('bcryptjs');
 const UserStats = require('./models/UserStats');
+const User = require('./models/User');
+const session = require('express-session');
 const app = express();
 
 // MongoDB Atlas Connection String
@@ -9,17 +12,95 @@ const uri = 'mongodb+srv://mateodrglin:2fw5CpPW@bdotracker.kyggydo.mongodb.net/?
 
 app.use(cors());  // cors
 app.use(express.json()); 
-
+//session
+app.use(session({
+  secret: 'Webapps', // Choose a strong secret key
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false } // Set to true if using HTTPS
+}));
+// import.vue save
 app.post('/saveStats', async (req, res) => {
+  console.log("SaveStats payload:", req.body);
   try {
     const data = req.body;
+    
+    const userId = req.body.userId;
+    if (!userId) {
+     return res.status(400).send({ message: "User ID is required" });
+  }
+
+
+
+    // Ensure the user ID is a string
+    data.userId = String(userId);
+
     const newStat = new UserStats(data);
     await newStat.save();
     res.status(200).send({ message: "Data saved successfully" });
   } catch (err) {
     console.error(err);
-    res.status(500).send({ error: err.message });  // error log big
+    res.status(500).send({ error: err.message });
   }
+  
+});
+
+// register
+app.post('/register', async (req, res) => {
+  try {
+      const { name, email, password } = req.body;
+
+      // Check if user with the same email exists
+     const existingUser = await User.findOne({ email });
+    if (existingUser) {
+    console.log('Attempted to register with an already-existing email:', email);
+    return res.status(400).send({ message: 'User with this email already exists.' });
+}
+
+const newUser = new User({
+  name,
+  email,
+  password
+});
+
+await newUser.save();
+
+
+      res.status(201).send({ message: 'User registered successfully' });
+  } catch (error) {
+      console.error(error);
+      res.status(500).send({ message: 'Error registering user', error });
+  } 
+});
+// Login 
+app.post('/login', async (req, res) => {
+  const { email, password } = req.body;
+
+  // find email
+  const user = await User.findOne({ email });
+  
+  if (!user) {
+    return res.status(400).json({ message: 'Invalid email or password' });
+  }
+
+  // Compare pass w hash pass
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    return res.status(400).json({ message: 'Invalid email or password' });
+  }
+
+  // Save user ID to session to mark user as authenticated
+  req.session.userId = user._id;
+
+  res.json({ message: 'Login successful', userId: user._id });
+});
+
+//logout
+app.delete('/logout', (req, res) =>{
+  req.session.destroy((err) => {
+    if(err) return res.status(500).send("Error during logout.");
+    res.send({ message: 'Logout successful' });
+  });
 });
 
 mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
