@@ -108,7 +108,13 @@ app.post('/login', async (req, res) => {
   res.json({ message: 'Login successful', userId: user._id});
 
 });
-
+app.get('/isAuthenticated', (req, res) => {
+  if (req.session && req.session.userId) {
+    res.json({ isAuthenticated: true });
+  } else {
+    res.json({ isAuthenticated: false });
+  }
+});
 //logout
 app.delete('/logout', (req, res) =>{
   req.session.destroy((err) => {
