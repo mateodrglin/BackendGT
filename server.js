@@ -122,6 +122,31 @@ app.delete('/logout', (req, res) =>{
     res.send({ message: 'Logout successful' });
   });
 });
+//Chart
+app.get('/totalsilver', ensureAuthenticated, async (req, res) => {
+  try {
+    const userId = req.session.userId;  // Pulling userId from session
+
+    const totals = await UserStats.aggregate([
+      {
+        $match: { userId: userId }
+      },
+      {
+        $group: {
+          _id: "$grindingSpotName",
+          totalSilver: { $sum: "$total" }
+        }
+      }
+    ]);
+
+    res.status(200).json(totals);
+  } catch (error) {
+    console.error("Error fetching total silver:", error);
+    res.status(500).send({ message: 'Error fetching total silver' });
+  }
+});
+
+
 
 mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
   .then(() => console.log('MongoDB connected...'))
