@@ -1,11 +1,12 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const cors = require('cors');  
+const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const UserStats = require('./models/UserStats');
 const User = require('./models/User');
 const session = require('express-session');
 const MongoStore = require('connect-mongo');
+
 const app = express();
 
 // MongoDB Atlas Connection String
@@ -16,7 +17,8 @@ app.use(cors({
   credentials: true
 }));
 app.use(express.json()); 
-//session
+
+// Session setup
 app.use(session({
   secret: 'your-secret-key',
   resave: false,
@@ -25,13 +27,31 @@ app.use(session({
       mongoUrl: 'mongodb+srv://mateodrglin:2fw5CpPW@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority'
   })
 }));
+
+// Middleware to ensure the user is authenticated
 function ensureAuthenticated(req, res, next) {
   if (!req.session.userId) {
-      return res.status(401).send({ message: "User not authenticated" });
+    return res.status(401).send({ message: "User not authenticated" });
   }
   next();
 }
 
+// Fetch user's email based on session ID
+app.get('/user', ensureAuthenticated, async (req, res) => {
+  try {
+    const userId = req.session.userId;
+
+    const user = await User.findById(userId);
+
+    if (user) {
+      res.status(200).json({ email: user.email });
+    } else {
+      res.status(404).json({ message: 'User not found' });
+    }
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 // import.vue save
 app.post('/saveStats', ensureAuthenticated, async (req, res) => {
