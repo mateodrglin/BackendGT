@@ -204,26 +204,42 @@ app.post('/savePrices', ensureAuthenticated, (req, res) => {
 });
 //retrive data
 app.get('/getPrices/:spotNumber?', ensureAuthenticated, async (req, res) => {
+  const spotNumber = parseInt(req.params.spotNumber);
+  
+  if (isNaN(spotNumber) || spotNumber <= 0) {
+    return res.status(400).json({ error: "Invalid spot number." });
+  }
   try {
-      const spotNumber = req.params.spotNumber;
+    let spotNumber = req.params.spotNumber;
 
-      let spotPrices;
-      if (spotNumber) {
-          spotPrices = await SpotPrice.findOne({ spotNumber: spotNumber });
-      } else {
-          spotPrices = await SpotPrice.find();
-      }
+    // Check if spotNumber is the string "null" or undefined
+    if (!spotNumber || spotNumber === "null") {
+      return res.status(400).json({ message: 'Spot number is missing or invalid.' });
+    }
 
-      if (spotPrices) {
-          res.status(200).json(spotPrices);
-      } else {
-          res.status(404).json({ message: 'Prices not found' });
-      }
+    // Convert spotNumber to a number
+    spotNumber = parseInt(spotNumber, 10);
+
+    let spotPrices;
+    if (spotNumber) {
+      spotPrices = await SpotPrice.findOne({ spotNumber: spotNumber });
+    } else {
+      spotPrices = await SpotPrice.find();
+    }
+
+    if (spotPrices) {
+      res.status(200).json(spotPrices);
+    } else {
+      res.status(404).json({ message: 'Prices not found' });
+    }
   } catch (error) {
-      console.error("Error fetching prices:", error);
-      res.status(500).send({ message: 'Error fetching prices' });
+    console.error("Error fetching prices:", error);
+    res.status(500).send({ message: 'Error fetching prices' });
   }
 });
+
+
+
 //edit data
 app.put('/updatePrices/:spotNumber', ensureAuthenticated, async (req, res) => {
   try {
