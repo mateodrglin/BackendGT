@@ -4,8 +4,12 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const UserStats = require('./models/UserStats');
 const User = require('./models/User');
+
 const session = require('express-session');
+const SpotPrice = require('./models/SpotPrice');
+
 const MongoStore = require('connect-mongo');
+
 
 const app = express();
 
@@ -181,7 +185,67 @@ app.get('/totalsilver', ensureAuthenticated, async (req, res) => {
     res.status(500).send({ message: 'Error fetching total silver' });
   }
 });
+//saveprices
+app.post('/savePrices', ensureAuthenticated, (req, res) => {
+  const { spotNumber, items } = req.body;
 
+  const spotPrice = new SpotPrice({
+      spotNumber,
+      items
+  });
+
+  spotPrice.save((err) => {
+      if (err) {
+          res.status(500).send('Failed to save prices.');
+      } else {
+          res.status(200).send('Prices saved successfully.');
+      }
+  });
+});
+//retrive data
+app.get('/getPrices/:spotNumber?', ensureAuthenticated, async (req, res) => {
+  try {
+      const spotNumber = req.params.spotNumber;
+
+      let spotPrices;
+      if (spotNumber) {
+          spotPrices = await SpotPrice.findOne({ spotNumber: spotNumber });
+      } else {
+          spotPrices = await SpotPrice.find();
+      }
+
+      if (spotPrices) {
+          res.status(200).json(spotPrices);
+      } else {
+          res.status(404).json({ message: 'Prices not found' });
+      }
+  } catch (error) {
+      console.error("Error fetching prices:", error);
+      res.status(500).send({ message: 'Error fetching prices' });
+  }
+});
+//edit data
+app.put('/updatePrices/:spotNumber', ensureAuthenticated, async (req, res) => {
+  try {
+      const spotNumber = req.params.spotNumber;
+      const { items } = req.body;
+
+      const spot = await SpotPrice.findOne({ spotNumber });
+
+      if (!spot) {
+          return res.status(404).send('Spot not found.');
+      }
+
+      spot.items = items;
+      await spot.save();
+
+      res.status(200).send('Prices updated successfully.');
+
+  } catch (error) {
+      console.error("Error updating prices:", error);
+      res.status(500).send({ message: 'Error updating prices' });
+  }
+});
 
 
 mongoose.connect(uri, { useNewUrlParser: true, useUnifiedTopology: true })
