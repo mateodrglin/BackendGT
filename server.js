@@ -151,35 +151,19 @@ app.get('/totalsilver', ensureAuthenticated, async (req, res) => {
   try {
     const userId = req.session.userId;  // Pulling userId from session
 
-    const totalsPerSpot = await UserStats.aggregate([
+    const totals = await UserStats.aggregate([
       {
         $match: { userId: userId }
       },
       {
         $group: {
           _id: "$grindingSpotName",
-          totalSilver: { $sum: "$total" },
-          averageSilver: { $avg: "$average" },
-          totalHours: { $sum: "$hours" }
+          totalSilver: { $sum: "$total" }
         }
       }
     ]);
 
-    const accumulatedTotal = await UserStats.aggregate([
-      {
-        $match: { userId: userId }
-      },
-      {
-        $group: {
-          _id: null,
-          totalSilver: { $sum: "$total" },
-          averageSilver: { $avg: "$average" },
-          totalHours: { $sum: "$hours" }
-        }
-      }
-    ]);
-
-    res.status(200).json({totalsPerSpot, accumulatedTotal: accumulatedTotal[0]});
+    res.status(200).json(totals);
   } catch (error) {
     console.error("Error fetching total silver:", error);
     res.status(500).send({ message: 'Error fetching total silver' });
