@@ -7,6 +7,10 @@ const userStatsSchema = new mongoose.Schema({
   grindingSpotName: String, 
   items: Object, 
   total: Number,
+  totalDiscounted: {
+    type: Number,
+    required: true,
+},
   average: Number,
   hours: Number,
   minutes: Number,
