@@ -142,7 +142,7 @@ app.delete('/logout', (req, res) =>{
     res.send({ message: 'Logout successful' });
   });
 });
-//Chart
+//Chart i home
 app.get('/totalsilver', ensureAuthenticated, async (req, res) => {
   try {
     const userId = req.session.userId;  // Pulling userId from session
@@ -155,8 +155,18 @@ app.get('/totalsilver', ensureAuthenticated, async (req, res) => {
         $group: {
           _id: "$grindingSpotName",
           totalSilver: { $sum: "$total" },
+          totalDiscounted: { $sum: "$totalDiscounted" },
           averageSilver: { $avg: "$average" },
           totalHours: { $sum: "$hours" }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          totalSilver: 1,
+          totalDiscounted: 1,
+          averageSilver: { $round: ["$averageSilver", 0] }, // Rounding here
+          totalHours: 1
         }
       }
     ]);
@@ -169,8 +179,18 @@ app.get('/totalsilver', ensureAuthenticated, async (req, res) => {
         $group: {
           _id: null,
           totalSilver: { $sum: "$total" },
+          totalDiscounted: { $sum: "$totalDiscounted" },
           averageSilver: { $avg: "$average" },
           totalHours: { $sum: "$hours" }
+        }
+      },
+      {
+        $project: {
+          _id: 1,
+          totalSilver: 1,
+          totalDiscounted: 1,
+          averageSilver: { $round: ["$averageSilver", 0] }, // Rounding here
+          totalHours: 1
         }
       }
     ]);
@@ -181,6 +201,7 @@ app.get('/totalsilver', ensureAuthenticated, async (req, res) => {
     res.status(500).send({ message: 'Error fetching total silver' });
   }
 });
+
 
 
 
