@@ -142,6 +142,25 @@ app.delete('/logout', (req, res) =>{
     res.send({ message: 'Logout successful' });
   });
 });
+// highest silver kinda like leaderboard
+app.get('/highestTotalDiscountedSilver', ensureAuthenticated, async (req, res) => {
+  try {
+      const userId = req.session.userId;
+
+      // Query the UserStats collection to get the highest "totalDiscounted" value for the authenticated user
+      const highestTotalDiscountedSession = await UserStats.findOne({ userId: userId }).sort({ totalDiscounted: -1 }).limit(1);
+
+      if (highestTotalDiscountedSession) {
+          res.json({ highestTotalDiscountedSilver: highestTotalDiscountedSession.totalDiscounted });
+      } else {
+          res.json({ highestTotalDiscountedSilver: 0 });
+      }
+  } catch (error) {
+      console.error("Error fetching highest Total Discounted Silver:", error);
+      res.status(500).send({ message: 'Error fetching highest Total Discounted Silver' });
+  }
+});
+
 //Chart i home
 app.get('/totalsilver', ensureAuthenticated, async (req, res) => {
   try {
