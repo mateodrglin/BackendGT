@@ -20,7 +20,7 @@ app.use(express.json());
 
 // Session setup
 app.use(session({
-  secret: 'your-secret-key',
+  secret: 'GrindGT',
   resave: false,
   saveUninitialized: true,
   store: MongoStore.create({ 
