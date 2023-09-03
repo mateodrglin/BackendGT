@@ -10,7 +10,7 @@ const MongoStore = require('connect-mongo');
 const app = express();
 
 // MongoDB Atlas Connection String
-const uri = 'mongodb+srv://mateodrglin:2fw5CpPW@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority';
+const uri = 'mongodb+srv://mateodrglin:ngUaHJYlXKuDnoEY@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority';
 
 app.use(cors({
   origin: 'https://front-end-gt-cjol.vercel.app',
@@ -25,15 +25,16 @@ app.use(session({
   resave: false,
   saveUninitialized: true,
   store: MongoStore.create({
-    mongoUrl: 'mongodb+srv://mateodrglin:2fw5CpPW@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority'
+    mongoUrl: 'mongodb+srv://mateodrglin:ngUaHJYlXKuDnoEY@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority'
   }),
   cookie: {
     maxAge: 1000 * 60 * 60 * 24, // 24 hours
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production'  // in production, only transmit over HTTPS
-}
-
+    secure: process.env.NODE_ENV === 'production',  // in production, only transmit over HTTPS
+    sameSite: 'none'
+  }
 }));
+
 
 // Middleware to ensure the user is authenticated
 function ensureAuthenticated(req, res, next) {
@@ -115,7 +116,7 @@ app.post('/register', async (req, res) => {
 // Login 
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
-
+  console.log("Attempting login for email:", email);
   // find email
   const user = await User.findOne({ email });
 
@@ -139,7 +140,7 @@ app.post('/login', async (req, res) => {
 
   // Save user ID to session to mark user as authenticated
   req.session.userId = user._id;
-
+  console.log("Login successful. Session data:", req.session);
   // Set the new session ID in the user's document
   user.currentSessionId = req.sessionID;
   await user.save();
@@ -148,12 +149,17 @@ app.post('/login', async (req, res) => {
 });
 
 app.get('/isAuthenticated', (req, res) => {
+  console.log("Checking authentication. Session data:", req.session);
+
   if (req.session && req.session.userId) {
-    res.json({ isAuthenticated: true });
+      console.log("User is authenticated.");
+      res.json({ isAuthenticated: true });
   } else {
-    res.json({ isAuthenticated: false });
+      console.log("User is not authenticated.");
+      res.json({ isAuthenticated: false });
   }
 });
+
 //logout
 app.delete('/logout', async (req, res) => {
   // Find the user based on the current session ID
