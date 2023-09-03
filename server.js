@@ -26,7 +26,13 @@ app.use(session({
   saveUninitialized: true,
   store: MongoStore.create({
     mongoUrl: 'mongodb+srv://mateodrglin:2fw5CpPW@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority'
-  })
+  }),
+  cookie: {
+    maxAge: 1000 * 60 * 60 * 24, // 24 hours
+    httpOnly: true,
+    secure: process.env.NODE_ENV === 'production'  // in production, only transmit over HTTPS
+}
+
 }));
 
 // Middleware to ensure the user is authenticated
