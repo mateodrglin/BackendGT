@@ -26,8 +26,15 @@ app.use(session({
   saveUninitialized: true,
   store: MongoStore.create({ 
       mongoUrl: 'mongodb+srv://mateodrglin:ngUaHJYlXKuDnoEY@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority'
-  })
+  }),
+  cookie: {
+      maxAge: 1000 * 60 * 60 * 24, // 24 hours
+      httpOnly: true,
+      secure: true, 
+      sameSite: 'none'
+  }
 }));
+
 
 // Middleware to ensure the user is authenticated
 function ensureAuthenticated(req, res, next) {
