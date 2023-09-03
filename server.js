@@ -13,7 +13,7 @@ const app = express();
 const uri = 'mongodb+srv://mateodrglin:2fw5CpPW@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority';
 
 app.use(cors({
-  origin: 'https://front-end-gt-cjol-9r3gg1rfj-mateodrglin.vercel.app', // replace with your frontend server address
+  origin: 'https://front-end-gt-cjol-9r3gg1rfj-mateodrglin.vercel.app', 
   credentials: true
 }));
 app.use(express.json()); 
