@@ -120,21 +120,33 @@ app.post('/login', async (req, res) => {
   const user = await User.findOne({ email });
 
   if (!user) {
-    return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(400).json({ message: 'Invalid email or password' });
   }
 
   // Compare pass w hash pass
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    return res.status(400).json({ message: 'Invalid email or password' });
+      return res.status(400).json({ message: 'Invalid email or password' });
+  }
+
+  if (user.currentSessionId) {
+      req.sessionStore.destroy(user.currentSessionId, (err) => {
+          if (err) {
+              console.error("Error destroying old session:", err);
+          }
+      });
   }
 
   // Save user ID to session to mark user as authenticated
   req.session.userId = user._id;
 
-  res.json({ message: 'Login successful', userId: user._id });
+  // Set the new session ID in the user's document
+  user.currentSessionId = req.sessionID;
+  await user.save();
 
+  res.json({ message: 'Login successful', userId: user._id });
 });
+
 app.get('/isAuthenticated', (req, res) => {
   if (req.session && req.session.userId) {
     res.json({ isAuthenticated: true });
@@ -143,12 +155,20 @@ app.get('/isAuthenticated', (req, res) => {
   }
 });
 //logout
-app.delete('/logout', (req, res) => {
+app.delete('/logout', async (req, res) => {
+  // Find the user based on the current session ID
+  const user = await User.findOne({ currentSessionId: req.sessionID });
+
+  if (user) {
+      user.currentSessionId = null;
+      await user.save();
+  }
   req.session.destroy((err) => {
-    if (err) return res.status(500).send("Error during logout.");
-    res.send({ message: 'Logout successful' });
+      if (err) return res.status(500).send("Error during logout.");
+      res.send({ message: 'Logout successful' });
   });
 });
+
 // highest silver kinda like leaderboard
 app.get('/highestTotalDiscountedSilver', ensureAuthenticated, async (req, res) => {
   try {
