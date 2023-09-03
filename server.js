@@ -106,13 +106,18 @@ app.post('/register', async (req, res) => {
 
     await newUser.save();
 
+    // Log the user in after registration
+    req.session.userId = newUser._id;
+    newUser.currentSessionId = req.sessionID;
+    await newUser.save();
 
-    res.status(201).send({ message: 'User registered successfully' });
+    res.status(201).send({ message: 'User registered and logged in successfully', userId: newUser._id });
   } catch (error) {
     console.error(error);
     res.status(500).send({ message: 'Error registering user', error });
   }
 });
+
 // Login 
 app.post('/login', async (req, res) => {
   const { email, password } = req.body;
