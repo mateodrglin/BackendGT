@@ -8,7 +8,7 @@ const UserSchema = new mongoose.Schema({
         unique: true,
         trim: true
     },  
-    currentSessionId: {
+    token: {
         type: String,
         default: null
     },  

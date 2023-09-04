@@ -4,52 +4,64 @@ const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const UserStats = require('./models/UserStats');
 const User = require('./models/User');
-const session = require('express-session');
-const MongoStore = require('connect-mongo');
+const jwt = require('jsonwebtoken');
 
 const app = express();
+const SECRET_KEY = 'NODEGTTRACK';
 
 // MongoDB Atlas Connection String
-const uri = 'mongodb+srv://mateodrglin:ngUaHJYlXKuDnoEY@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority';
+const uri = 'mongodb+srv://mateodrglin:LUoAMsWgAvdThREs@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority';
+const corsOptions = {
+  origin: 'http://localhost:8080',
+  credentials: true 
+};
 
-app.use(cors({
-  origin: 'https://front-end-gt-cjol.vercel.app', 
-  credentials: true
-}));
+app.use(cors(corsOptions));
 
-app.use(express.json()); 
+  app.use(express.json());
 
-// Session setup
-app.use(session({
-  secret: 'GrindGT',
-  resave: false,
-  saveUninitialized: false, 
-  store: MongoStore.create({ 
-    mongoUrl: 'mongodb+srv://mateodrglin:ngUaHJYlXKuDnoEY@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority'
-  }),
-  cookie: {
-    domain: '.vercel.app', 
-    maxAge: 1000 * 60 * 60 * 24, // 24 hours
-    httpOnly: true,
-    secure: true,
-    sameSite: 'none'
+const verifyToken = (req, res, next) => {
+  const bearerHeader = req.headers['authorization'];
+  if (typeof bearerHeader !== 'undefined') {const userId = req.userId;
+      const bearer = bearerHeader.split(' ');
+      const bearerToken = bearer[1];
+      jwt.verify(bearerToken, 'NODEGTTRACK', (err, authData) => {
+          if (err) {
+              res.sendStatus(403); 
+          } else {
+              req.userId = authData.userId;
+              next();
+          }
+      });
+  } else {
+      res.sendStatus(403);
   }
-}));
-
-
+};
 
 // Middleware to ensure the user is authenticated
 function ensureAuthenticated(req, res, next) {
-  if (!req.session.userId) {
-    return res.status(401).send({ message: "User not authenticated" });
+  const bearerHeader = req.headers['authorization'];
+  if (typeof bearerHeader !== 'undefined') {
+      const bearer = bearerHeader.split(' ');
+      const bearerToken = bearer[1];
+      jwt.verify(bearerToken, SECRET_KEY, (err, authData) => {
+          if (err) {
+              return res.status(403).send({ message: "Token is not valid" }); 
+          } else {
+              req.userId = authData.userId;
+              next();
+          }
+      });
+  } else {
+      return res.status(403).send({ message: "Authorization token is missing" });
   }
-  next();
 }
+
 
 // Fetch user's email based on session ID
 app.get('/user', ensureAuthenticated, async (req, res) => {
   try {
-    const userId = req.session.userId;
+    const userId = req.userId;
 
     const user = await User.findById(userId);
 
@@ -69,7 +81,7 @@ app.post('/saveStats', ensureAuthenticated, async (req, res) => {
   try {
       const data = req.body;
       
-      const userId = req.session.userId;
+      const userId = req.userId;
 
       if (!userId) {
           return res.status(400).send({ message: "User ID is required" });
@@ -115,47 +127,51 @@ await newUser.save();
       res.status(500).send({ message: 'Error registering user', error });
   } 
 });
-// Login 
+// Login route
 app.post('/login', async (req, res) => {
-  const { email, password } = req.body;
+  try {
+    const { email, password } = req.body;
 
-  // find email
-  const user = await User.findOne({ email });
-  
-  if (!user) {
-    return res.status(400).json({ message: 'Invalid email or password' });
+    // Find user by email
+    const user = await User.findOne({ email });
+    
+    if (!user) {
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+
+    // Compare provided password with stored hash
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(400).json({ message: 'Invalid email or password' });
+    }
+
+    // Sign a JWT token and send it in response
+    const token = jwt.sign({ userId: user._id }, 'NODEGTTRACK', { expiresIn: '1h' });
+    res.json({ token });
+  } catch (error) {
+    res.status(500).json({ message: 'Internal server error' });
   }
-
-  // Compare pass w hash pass
-  const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) {
-    return res.status(400).json({ message: 'Invalid email or password' });
-  }
-
-  // Save user ID to session to mark user as authenticated
-  req.session.userId = user._id;
-
-  res.json({ message: 'Login successful', userId: user._id});
-
 });
+
 app.get('/isAuthenticated', (req, res) => {
-  if (req.session && req.session.userId) {
+  const bearerHeader = req.headers['authorization'];
+  if (!bearerHeader) return res.json({ isAuthenticated: false });
+
+  const token = bearerHeader.split(' ')[1];
+  jwt.verify(token, SECRET_KEY, (err, decoded) => {
+    if (err) {
+      console.error("JWT Verification Error:", err);
+      return res.json({ isAuthenticated: false });
+    }
+
     res.json({ isAuthenticated: true });
-  } else {
-    res.json({ isAuthenticated: false });
-  }
-});
-//logout
-app.delete('/logout', (req, res) =>{
-  req.session.destroy((err) => {
-    if(err) return res.status(500).send("Error during logout.");
-    res.send({ message: 'Logout successful' });
   });
 });
+
 // highest silver kinda like leaderboard
 app.get('/highestTotalDiscountedSilver', ensureAuthenticated, async (req, res) => {
   try {
-      const userId = req.session.userId;
+    const userId = req.userId;
 
       // Query the UserStats collection to get the highest "totalDiscounted" value for the authenticated user
       const highestTotalDiscountedSession = await UserStats.findOne({ userId: userId }).sort({ totalDiscounted: -1 }).limit(1);
@@ -174,8 +190,7 @@ app.get('/highestTotalDiscountedSilver', ensureAuthenticated, async (req, res) =
 //Chart i home
 app.get('/totalsilver', ensureAuthenticated, async (req, res) => {
   try {
-    const userId = req.session.userId;  // Pulling userId from session
-
+    const userId = req.userId;
     const totalsPerSpot = await UserStats.aggregate([
       {
         $match: { userId: userId }
