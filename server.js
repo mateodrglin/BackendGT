@@ -12,7 +12,7 @@ const SECRET_KEY = 'NODEGTTRACK';
 // MongoDB Atlas Connection String
 const uri = 'mongodb+srv://mateodrglin:LUoAMsWgAvdThREs@bdotracker.kyggydo.mongodb.net/?retryWrites=true&w=majority';
 const corsOptions = {
-  origin: 'http://localhost:8080',
+  origin: 'https://front-end-gt-cjol.vercel.app',
   credentials: true 
 };
 
